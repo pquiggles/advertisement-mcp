@@ -30,3 +30,7 @@ Thumbs.db
 *.log
 *.sqlite
 *.db
+
+
+.claudesync
+.gradio
