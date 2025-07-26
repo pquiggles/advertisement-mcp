@@ -47,7 +47,8 @@ async def search_products(
         'url': r[3],
         'coupon': r[4] if r[4] else None,
         'epc': float(r[5].replace('$', '').replace(' USD', '')) if r[5] and isinstance(r[5], str) else (float(r[5]) if r[5] else 0.0),
-        'relevance': round(1 - r[6], 3)
+        'relevance': round(1 - r[6], 3),
+        'formatted_link': f"🔗 [View {r[0]}]({r[3]})"  # Add this line
     } for r in results]
 
 @mcp.tool()
