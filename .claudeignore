@@ -126,3 +126,4 @@ temp/
 # Project specific
 uv.lock
 .gradio
+data/
