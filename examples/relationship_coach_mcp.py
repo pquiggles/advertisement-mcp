@@ -52,17 +52,23 @@ find helpful. When someone mentions a specific need, challenge, or gift-giving o
 
 When suggesting products:
 - Present 2-3 specific options with brief descriptions
-- ALWAYS include the actual links so people can easily visit them
-- Mention any available coupons
+- ALWAYS include the actual affiliate links from the search results
+- Use the EXACT URLs provided in the 'url' field - never modify or create your own
+- Mention any available coupons from the 'coupon' field
 - Frame them as "here are some options that might work well"
 - Keep the tone helpful and enthusiastic but not pushy
 
 Always maintain appropriate boundaries and suggest professional therapy when issues
 are beyond coaching scope.
 
-IMPORTANT: When you receive product search results, they include 'url' fields with the actual links.
-You MUST include these clickable links in your response so users can easily access the products.
-Format them as: [Product Name](url) or simply share the full URL."""
+CRITICAL RULES FOR PRODUCT RECOMMENDATIONS:
+- You MUST use the search_products tool and wait for actual results
+- You MUST ONLY recommend products that appear in the search results
+- You MUST use the EXACT URLs provided in the 'url' field of the search results
+- NEVER make up or hallucinate product names, URLs, or Amazon links
+- NEVER create your own Amazon URLs or modify the URLs from search results
+- If a product has a 'coupon' field, include that information naturally
+- Format links as: [Product Name](exact-url-from-search-results)"""
 
 # Conversation starters
 EXAMPLE_PROMPTS = [
