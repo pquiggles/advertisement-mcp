@@ -295,13 +295,13 @@ with gr.Blocks(title="Blog Affiliate Link Enhancer") as interface:
                 max_lines=30
             )
             
+            process_btn = gr.Button("✨ Enhance with Affiliate Links", variant="primary", size="lg")
+            
             gr.Examples(
                 examples=EXAMPLE_POSTS,
                 inputs=input_text,
                 label="Try an example post:"
             )
-            
-            process_btn = gr.Button("✨ Enhance with Affiliate Links", variant="primary", size="lg")
         
         with gr.Column():
             output_text = gr.Textbox(

@@ -289,18 +289,20 @@ def chat_wrapper(message: str, history: List[Dict]) -> str:
 interface = gr.ChatInterface(
     fn=chat_wrapper,
     type="messages",
-    title="💝 AI Relationship Coach (with Product Recommendations)",
+    title="💝 AI Relationship Coach",
     description="""Welcome! I'm here to help you navigate relationship challenges with empathy and evidence-based guidance.
     
-    **What I can help with:** 
+    **What I can help with:**
     - Communication issues and conflict resolution
     - Dating advice and relationship building
-    - Gift ideas and product recommendations
     - Family dynamics and emotional support
+    - Personal growth within relationships
+    - Meaningful ways to strengthen connections
+    - Practical resources and thoughtful ideas
     
     **Note:** While I provide coaching and support, I'm not a replacement for professional therapy.
     
-    💡 **Try asking about:** Anniversary gifts, relationship books, date ideas, or communication tools!""",
+    💡 **Feel free to ask about:** Relationship challenges, communication tips, or ways to deepen your connections!""",
     examples=EXAMPLE_PROMPTS,
 )
 
@@ -319,7 +321,7 @@ if __name__ == "__main__":
     
     interface.launch(
         server_name="0.0.0.0",
-        server_port=7860,
+        server_port=7863,
         share=False,
         show_error=True,
     )
