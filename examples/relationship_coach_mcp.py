@@ -3,6 +3,7 @@ import asyncio
 import anthropic
 from typing import List, Dict, Optional
 from dotenv import load_dotenv
+import json
 import gradio as gr
 from mcp import ClientSession
 from mcp.client.streamable_http import streamablehttp_client
@@ -70,7 +71,13 @@ CRITICAL RULES FOR PRODUCT RECOMMENDATIONS:
 - If a product has a 'coupon' field, include that information naturally
 - Format links as: [Product Name](exact-url-from-search-results)
 
-IMPORTANT: When you need to search for products, do NOT announce that you're searching. Simply use the tool and then present the results naturally in your response. Avoid phrases like "Let me search for..." or "Let me try another search..." - just search and respond with the results."""
+CRITICAL: When you need to search for products:
+- DO NOT announce that you're searching
+- DO NOT say "Let me search for..." or similar phrases
+- DO NOT explain your search process
+- Simply use the search_products tool silently and then present the results naturally
+- Your response should ONLY contain the final helpful advice with product recommendations
+- Act as if you already know these products rather than having just searched for them"""
 
 # Conversation starters
 EXAMPLE_PROMPTS = [
@@ -116,7 +123,7 @@ async def process_message_with_mcp(message: str, history: List[Dict]) -> str:
         async with streamablehttp_client("http://localhost:8000/mcp") as (
             read_stream,
             write_stream,
-            _,  # Third parameter we don't need
+            _,
         ):
             logger.info("Transport streams created")
             
@@ -160,8 +167,8 @@ async def process_message_with_mcp(message: str, history: List[Dict]) -> str:
                 
                 for content in response.content:
                     if content.type == 'text':
-                        # Don't add text to final_text if there are tool uses
-                        # This text is usually "Let me search..." type messages
+                        # Store text content but don't add to final_text yet
+                        # We'll decide later based on whether there are tool uses
                         assistant_message_content.append(content)
                     elif content.type == 'tool_use':
                         has_tool_use = True
@@ -187,13 +194,24 @@ async def process_message_with_mcp(message: str, history: List[Dict]) -> str:
                             
                             # Extract the actual content from the MCP result
                             if hasattr(result, 'content') and result.content:
-                                # Join all text content from the result
-                                tool_result_content = '\n'.join([
-                                    item.text for item in result.content
-                                    if hasattr(item, 'text') and item.text
-                                ])
+                                # Handle different content types
+                                if isinstance(result.content, list):
+                                    # Join all text content from the result
+                                    tool_result_content = '\n'.join([
+                                        str(item.text) if hasattr(item, 'text') else str(item)
+                                        for item in result.content
+                                        if item is not None
+                                    ])
+                                elif isinstance(result.content, str):
+                                    tool_result_content = result.content
+                                else:
+                                    tool_result_content = json.dumps(result.content) if hasattr(json, 'dumps') else str(result.content)
                             else:
-                                tool_result_content = str(result)
+                                # If result is a list or dict, convert to JSON string
+                                if isinstance(result, (list, dict)):
+                                    tool_result_content = json.dumps(result, indent=2)
+                                else:
+                                    tool_result_content = str(result)
                             
                             logger.info(f"Tool result content length: {len(tool_result_content)}")
                             logger.info(f"First 500 chars of tool result: {tool_result_content[:500]}")
@@ -245,7 +263,7 @@ async def process_message_with_mcp(message: str, history: List[Dict]) -> str:
                         logger.error(f"Error getting follow-up response: {str(follow_up_error)}")
                         raise
                 else:
-                    # No tool use, just add the text responses
+                    # No tool use, so we can use the initial text responses
                     for content in response.content:
                         if content.type == 'text':
                             final_text.append(content.text)
