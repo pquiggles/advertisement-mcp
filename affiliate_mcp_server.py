@@ -94,17 +94,35 @@ async def search_products(
         
         logger.info(f"Found {len(results)} products for query '{query}'")
         
-        formatted_results = [{
-            'name': r[0],
-            'description': r[1],
-            'category': r[2],
-            'url': r[3],
-            'coupon': r[4] if r[4] else None,
-            'epc': float(r[5].replace('$', '').replace(' USD', '')) if r[5] and isinstance(r[5], str) else (float(r[5]) if r[5] else 0.0),
-            'relevance': round(1 - r[6], 3),
-            'formatted_link': f"🔗 [View {r[0]}]({r[3]})",
-            'coupon_display': f"🎟️ Use code: {r[4]}" if r[4] else None
-        } for r in results]
+        formatted_results = []
+        for r in results:
+            # Handle EPC conversion safely
+            epc_value = 0.0
+            if r[5]:
+                try:
+                    if isinstance(r[5], str):
+                        # Remove currency symbols and try to convert
+                        cleaned_epc = r[5].replace('$', '').replace(' USD', '').strip()
+                        if cleaned_epc and cleaned_epc.replace('.', '').replace('-', '').isdigit():
+                            epc_value = float(cleaned_epc)
+                    else:
+                        epc_value = float(r[5])
+                except (ValueError, TypeError):
+                    # If conversion fails, default to 0.0
+                    logger.warning(f"Could not convert EPC value '{r[5]}' to float for product '{r[0]}'")
+                    epc_value = 0.0
+            
+            formatted_results.append({
+                'name': r[0],
+                'description': r[1],
+                'category': r[2],
+                'url': r[3],
+                'coupon': r[4] if r[4] else None,
+                'epc': epc_value,
+                'relevance': round(1 - r[6], 3),
+                'formatted_link': f"🔗 [View {r[0]}]({r[3]})",
+                'coupon_display': f"🎟️ Use code: {r[4]}" if r[4] else None
+            })
         
         # Log top result for monitoring
         if formatted_results:
@@ -174,16 +192,34 @@ async def get_top_products(
         
         results = conn.execute(query, params).fetchall()
         
-        products = [{
-            'name': r[0],
-            'description': r[1],
-            'category': r[2],
-            'url': r[3],
-            'coupon': r[4] if r[4] else None,
-            'epc': float(r[5].replace('$', '').replace(' USD', '')) if r[5] and isinstance(r[5], str) else (float(r[5]) if r[5] else 0.0),
-            'formatted_link': f"🔗 [View {r[0]}]({r[3]})",
-            'coupon_display': f"🎟️ Use code: {r[4]}" if r[4] else None
-        } for r in results]
+        products = []
+        for r in results:
+            # Handle EPC conversion safely
+            epc_value = 0.0
+            if r[5]:
+                try:
+                    if isinstance(r[5], str):
+                        # Remove currency symbols and try to convert
+                        cleaned_epc = r[5].replace('$', '').replace(' USD', '').strip()
+                        if cleaned_epc and cleaned_epc.replace('.', '').replace('-', '').isdigit():
+                            epc_value = float(cleaned_epc)
+                    else:
+                        epc_value = float(r[5])
+                except (ValueError, TypeError):
+                    # If conversion fails, default to 0.0
+                    logger.warning(f"Could not convert EPC value '{r[5]}' to float for product '{r[0]}'")
+                    epc_value = 0.0
+            
+            products.append({
+                'name': r[0],
+                'description': r[1],
+                'category': r[2],
+                'url': r[3],
+                'coupon': r[4] if r[4] else None,
+                'epc': epc_value,
+                'formatted_link': f"🔗 [View {r[0]}]({r[3]})",
+                'coupon_display': f"🎟️ Use code: {r[4]}" if r[4] else None
+            })
         
         logger.info(f"Returned {len(products)} top products")
         return products

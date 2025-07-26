@@ -68,7 +68,9 @@ CRITICAL RULES FOR PRODUCT RECOMMENDATIONS:
 - NEVER make up or hallucinate product names, URLs, or Amazon links
 - NEVER create your own Amazon URLs or modify the URLs from search results
 - If a product has a 'coupon' field, include that information naturally
-- Format links as: [Product Name](exact-url-from-search-results)"""
+- Format links as: [Product Name](exact-url-from-search-results)
+
+IMPORTANT: When you need to search for products, do NOT announce that you're searching. Simply use the tool and then present the results naturally in your response. Avoid phrases like "Let me search for..." or "Let me try another search..." - just search and respond with the results."""
 
 # Conversation starters
 EXAMPLE_PROMPTS = [
@@ -154,12 +156,15 @@ async def process_message_with_mcp(message: str, history: List[Dict]) -> str:
                 # Process response and handle tool calls
                 final_text = []
                 assistant_message_content = []
+                has_tool_use = False
                 
                 for content in response.content:
                     if content.type == 'text':
-                        final_text.append(content.text)
+                        # Don't add text to final_text if there are tool uses
+                        # This text is usually "Let me search..." type messages
                         assistant_message_content.append(content)
                     elif content.type == 'tool_use':
+                        has_tool_use = True
                         tool_name = content.name
                         tool_args = content.input
                         
@@ -180,13 +185,25 @@ async def process_message_with_mcp(message: str, history: List[Dict]) -> str:
                                 "content": assistant_message_content
                             })
                             
-                            # Add tool result
+                            # Extract the actual content from the MCP result
+                            if hasattr(result, 'content') and result.content:
+                                # Join all text content from the result
+                                tool_result_content = '\n'.join([
+                                    item.text for item in result.content
+                                    if hasattr(item, 'text') and item.text
+                                ])
+                            else:
+                                tool_result_content = str(result)
+                            
+                            logger.info(f"Tool result content length: {len(tool_result_content)}")
+                            logger.info(f"First 500 chars of tool result: {tool_result_content[:500]}")
+                            
                             messages.append({
                                 "role": "user",
                                 "content": [{
                                     "type": "tool_result",
                                     "tool_use_id": content.id,
-                                    "content": str(result)
+                                    "content": tool_result_content
                                 }]
                             })
                             
@@ -208,25 +225,44 @@ async def process_message_with_mcp(message: str, history: List[Dict]) -> str:
                             })
                 
                 # Get final response if there were tool calls
-                if any(content.type == 'tool_use' for content in response.content):
-                    follow_up = anthropic_client.messages.create(
-                        model="claude-3-5-sonnet-20241022",
-                        max_tokens=1000,
-                        system=SYSTEM_PROMPT,
-                        messages=messages,
-                        temperature=0.7
-                    )
-                    
-                    for content in follow_up.content:
+                if has_tool_use:
+                    logger.info(f"Getting follow-up response after tool use. Messages count: {len(messages)}")
+                    try:
+                        follow_up = anthropic_client.messages.create(
+                            model="claude-3-5-sonnet-20241022",
+                            max_tokens=1000,
+                            system=SYSTEM_PROMPT,
+                            messages=messages,
+                            temperature=0.7
+                        )
+                        
+                        logger.info(f"Follow-up response content types: {[c.type for c in follow_up.content]}")
+                        for content in follow_up.content:
+                            if content.type == 'text':
+                                logger.info(f"Adding text to final response: {len(content.text)} chars")
+                                final_text.append(content.text)
+                    except Exception as follow_up_error:
+                        logger.error(f"Error getting follow-up response: {str(follow_up_error)}")
+                        raise
+                else:
+                    # No tool use, just add the text responses
+                    for content in response.content:
                         if content.type == 'text':
                             final_text.append(content.text)
                 
-                return "\n".join(final_text) if final_text else "I couldn't process your request. Please try again."
+                result = "\n".join(final_text) if final_text else "I couldn't process your request. Please try again."
+                logger.info(f"Final response length: {len(result)}")
+                logger.info(f"Final text pieces: {len(final_text)}")
+                if not final_text:
+                    logger.warning("No final text generated - response.content: {}, has_tool_use: {}".format(
+                        [c.type for c in response.content], has_tool_use))
+                return result
         
     except Exception as e:
         logger.error(f"Error processing message: {str(e)}")
         logger.error(f"Error type: {type(e).__name__}")
         logger.error(traceback.format_exc())
+        logger.error(f"Message that caused error: {message}")
         
         # Try to provide a helpful error message
         if "connection" in str(e).lower():

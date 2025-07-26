@@ -36,29 +36,20 @@ Your approach:
 - Never be overly promotional or sales-focused
 - Aim for 2-4 affiliate link insertions per 500 words
 
-Process:
-1. Analyze the blog post to identify 2-4 key topics or areas where product recommendations would be helpful
-2. Use the search_products or search_multiple_products tool to find relevant products
-3. WAIT for the tool results - they will contain actual product names, URLs, and sometimes coupon codes
-4. Select 2-4 products from the ACTUAL SEARCH RESULTS
-5. Integrate these products naturally into the blog post using the EXACT URLs from the search results
-6. When a product has a coupon code available, mention it naturally (e.g., "currently 20% off with code SAVE20")
+You have access to a product search tool. When enhancing a blog post:
+1. Search for relevant products based on the blog's topics
+2. Select 2-4 products from the search results that genuinely fit the content
+3. Integrate these products naturally using the EXACT URLs from the 'url' field
+4. Include coupon information if available in the 'coupon' field
 
 CRITICAL RULES:
-- You MUST use the search_products tool and wait for results
+- You MUST use the search_products tool to find products
 - You MUST ONLY use products that appear in the search results
-- You MUST use the EXACT URLs provided in the 'url' field of the search results
-- You MUST use the EXACT affiliate links returned by the database - do not modify or create any URLs
-- NEVER make up or hallucinate product names, URLs, or Amazon links
-- NEVER use placeholder URLs or generate your own Amazon URLs
-- If a product has a 'coupon' field in the results, include that information
-- Only use products that have a valid 'url' field in the search results
+- You MUST use the EXACT URLs provided in the 'url' field
+- NEVER create or modify URLs
+- NEVER use placeholder URLs or generate Amazon links
 
-Good insertion examples (using ACTUAL data from search results):
-- "...when organizing your workspace (a label maker like [Brother P-touch](https://actual-affiliate-url.com/brother-123) can be incredibly helpful for this)..."
-- "...and for those interested in diving deeper, [Deep Work by Cal Newport](https://actual-affiliate-url.com/deep-work) offers comprehensive insights on this topic (use code READER15 for 15% off)."
-
-FINAL OUTPUT: Return ONLY the complete enhanced blog post with real affiliate links integrated. No explanations, no search messages, just the enhanced blog post."""
+When you receive search results and need to provide the final enhanced blog post, output ONLY the blog post content with affiliate links integrated. Do not include any explanations or meta-commentary."""
 
 # Example blog posts
 EXAMPLE_POSTS = [
@@ -140,15 +131,11 @@ async def process_blog_with_mcp(blog_content: str) -> str:
                 # Initial message to Claude
                 messages = [{
                     "role": "user",
-                    "content": f"""Please enhance this blog post by subtly adding 2-4 relevant affiliate product recommendations.
+                    "content": f"""Please enhance this blog post by subtly adding 2-4 relevant affiliate product recommendations. Search for products that would genuinely help readers and integrate them naturally into the content.
 
-IMPORTANT: After searching for products, return ONLY the complete enhanced blog post with affiliate links integrated. Do not include any explanations or search status messages.
+Blog post to enhance:
 
-Here's the blog post to enhance:
-
-{blog_content}
-
-Remember: Return ONLY the enhanced blog post content with affiliate links naturally integrated."""
+{blog_content}"""
                 }]
                 
                 # First Claude API call
@@ -201,6 +188,9 @@ Remember: Return ONLY the enhanced blog post content with affiliate links natura
                                 }]
                             })
                             
+                            # Reset assistant_message_content for next iteration
+                            assistant_message_content = []
+                            
                         except Exception as tool_error:
                             logger.error(f"Tool error: {str(tool_error)}")
                             messages.append({
@@ -214,6 +204,12 @@ Remember: Return ONLY the enhanced blog post content with affiliate links natura
                 
                 # Get final response if there were tool calls
                 if has_tool_use:
+                    # Add a reminder in the final request
+                    messages.append({
+                        "role": "user",
+                        "content": "Now please provide the enhanced blog post with the affiliate links naturally integrated. Output only the blog post content, no explanations."
+                    })
+                    
                     follow_up = anthropic_client.messages.create(
                         model="claude-3-5-sonnet-20241022",
                         max_tokens=2000,
